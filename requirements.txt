@@ -1,0 +1,4 @@
+textblob==0.15.3
+twython==3.8.2
+flask==0.11.1
+telepot==12.7
