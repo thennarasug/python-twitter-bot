@@ -35,7 +35,7 @@ twitter = Twython(APP_KEY, APP_SECRET, OAUTH_TOKEN, OAUTH_TOKEN_SECRET)
 
 #print (twitter.search(q='fiveperfectmovies'))
 
-with open('/storage/emulated/0/Download/pythontwitterbot/tweetthis.txt', 'r+') as tweetfile:
+with open('/storage/emulated/0/Download/pythontwitterbot/tweet.txt', 'r+') as tweetfile:
 	buff = tweetfile.readlines()
 
 for line in buff[:]:
