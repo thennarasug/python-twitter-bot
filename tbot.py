@@ -94,7 +94,7 @@ while True:
                     #count=100 max (default 15), result_type='mixed' or 'recent'
                     #count=15 max (default 15), result_type='popular'
                     print ("search twitter......", keyword, " in ", lang_list, " with max_limit as ", rt_fav_limit)
-                    search_results = twitter.search(q=keyword,count=100, lang=lang_list, result_type='mixed')
+                    search_results = twitter.search(q=keyword,count=1000, lang=lang_list, result_type='mixed')
                     #print (search_results)
                 except TwythonError as e:
                     print (e)
