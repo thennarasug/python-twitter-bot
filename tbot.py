@@ -123,7 +123,7 @@ while True:
                                 print (e)
                 print ("total filtered and retweeted..." + str(count))
         print ("end of search")
-    print ("sleeping for 1 hour")
-    time.sleep(3600)
+    print ("sleeping for 6 hour")
+    time.sleep(21600)
 else:
         print ("***terminated***")
