@@ -22,13 +22,17 @@ rt_fav_limit = input("max retweet_count or favorite_count? ")
 keywords_rt_fav_limits_all =  [[50,['signalapp','degoogle']],[125,['tutanota','protonmail','duckduckgo','protonvpn','tails OS','tor browser']],[250,['linux','manjaro','ubuntu']]]
 
 #TelegramBot method
-def sendtotelegram(TELEGRAM_TOKEN,tweetToTelegram):
+def sendtotelegram(TELEGRAM_TOKEN,TELEGRAM_TELEGRAM_CHAT_ID,tweetToTelegram):
     TelegramBot = telepot.Bot(TELEGRAM_TOKEN)
     #aboutme = TelegramBot.getMe()
     #print (TelegramBot.getMe())
+    
+    '''commented
     messages = TelegramBot.getUpdates()
     for message in messages:
         chat_id = message["message"]["from"]["id"]
+    '''
+    chat_id = TELEGRAM_TELEGRAM_CHAT_ID
     TelegramBot.sendMessage(chat_id, tweetToTelegram)
     print ("****updated TelegramBot****")
 
@@ -49,6 +53,7 @@ APP_SECRET = environ.get('APP_SECRET')
 OAUTH_TOKEN = environ.get('OAUTH_TOKEN')
 OAUTH_TOKEN_SECRET = environ.get('OAUTH_TOKEN_SECRET')
 TELEGRAM_TOKEN = environ.get('TELEGRAM_TOKEN')
+TELEGRAM_TELEGRAM_CHAT_ID = environ.get('TELEGRAM_TELEGRAM_CHAT_ID')
 
 twitter = Twython(APP_KEY, APP_SECRET, OAUTH_TOKEN, OAUTH_TOKEN_SECRET)
 
@@ -108,14 +113,14 @@ while True:
                                 if len(tweet['text']) > 200 or "https" in tweet['text']:
                                     print (tweet['text'])
                                     twitter.retweet(id=int(tweet['id']))
-                                    sendtotelegram(TELEGRAM_TOKEN,tweet['text'])
+                                    sendtotelegram(TELEGRAM_TOKEN,TELEGRAM_TELEGRAM_CHAT_ID,tweet['text'])
                                 else:
                                     tempStatus="RT @" + tweet['user']['screen_name'] + " : " + tweet['text'] + " via #5k6mbot"
                                     print (tempStatus.encode('utf-8'))
                                     #this code is commented because of difficult in identifying the polls. #TODO
                                     #twitter.update_status(status=tempStatus.encode('utf-8'))
                                     twitter.retweet(id=int(tweet['id']))
-                                    sendtotelegram(TELEGRAM_TOKEN,tweet['text'])
+                                    sendtotelegram(TELEGRAM_TOKEN,TELEGRAM_TELEGRAM_CHAT_ID,tweet['text'])
                                 count = count +1
                                 print ('Tweet from @%s Date: %s' % (tweet['user']['screen_name'].encode('utf-8'),tweet['created_at']))
                                 print (tweet['text'].encode('utf-8'), '\n', polarity_result)
