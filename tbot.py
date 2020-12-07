@@ -1,16 +1,13 @@
-#TelegramBot
-import telepot
-
-# Import a text processing library
-from textblob import TextBlob
-
-#Twython twitter api
-from twython import Twython, TwythonError
-
-#heroku env variables
+# TelegramBot
+import time
+# heroku env variables
 from os import environ
 
-import time
+import telepot
+# Import a text processing library
+from textblob import TextBlob
+# Twython twitter api
+from twython import Twython, TwythonError
 
 '''
 #no more command line or dynamic arguments, just kept it for reference.
@@ -19,14 +16,17 @@ keywords = input("twitter search keyword? ")
 rt_fav_limit = input("max retweet_count or favorite_count? ")
 '''
 
-keywords_rt_fav_limits_all =  [[50,['signalapp','degoogle']],[125,['tutanota','protonmail','duckduckgo','protonvpn','tails OS','tor browser']],[250,['linux','manjaro','ubuntu']]]
+keywords_rt_fav_limits_all = [[50, ['signalapp', 'degoogle']],
+                              [125, ['tutanota', 'protonmail', 'duckduckgo', 'protonvpn', 'tails OS', 'tor browser']],
+                              [250, ['linux', 'manjaro', 'ubuntu']]]
 
-#TelegramBot method
-def sendtotelegram(TELEGRAM_TOKEN,TELEGRAM_TELEGRAM_CHAT_ID,tweetToTelegram):
+
+# TelegramBot method
+def sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweetToTelegram):
     TelegramBot = telepot.Bot(TELEGRAM_TOKEN)
-    #aboutme = TelegramBot.getMe()
-    #print (TelegramBot.getMe())
-    
+    # aboutme = TelegramBot.getMe()
+    # print (TelegramBot.getMe())
+
     '''commented
     messages = TelegramBot.getUpdates()
     for message in messages:
@@ -34,19 +34,21 @@ def sendtotelegram(TELEGRAM_TOKEN,TELEGRAM_TELEGRAM_CHAT_ID,tweetToTelegram):
     '''
     chat_id = TELEGRAM_TELEGRAM_CHAT_ID
     TelegramBot.sendMessage(chat_id, tweetToTelegram)
-    print ("****updated TelegramBot****")
+    print("****updated TelegramBot****")
+
 
 # Analysis method
 def analysis(sentence):
-   # for sentence in sentences:
-        # Instantiate TextBlob
-        analysis = TextBlob(sentence)
-        # Parts of speech
-        #print("{}\n\nParts of speech:\n{}\n".format(sentence, analysis.tags))
-        # Sentiment analysis
-        sentiment=analysis.sentiment
-        #print("Sentiment:\n{}\n\n".format(sentiment))
-        return sentiment.polarity
+    # for sentence in sentences:
+    # Instantiate TextBlob
+    analysis = TextBlob(sentence)
+    # Parts of speech
+    # print("{}\n\nParts of speech:\n{}\n".format(sentence, analysis.tags))
+    # Sentiment analysis
+    sentiment = analysis.sentiment
+    # print("Sentiment:\n{}\n\n".format(sentiment))
+    return sentiment.polarity
+
 
 APP_KEY = environ.get('APP_KEY')
 APP_SECRET = environ.get('APP_SECRET')
@@ -57,8 +59,8 @@ TELEGRAM_TELEGRAM_CHAT_ID = environ.get('TELEGRAM_TELEGRAM_CHAT_ID')
 
 twitter = Twython(APP_KEY, APP_SECRET, OAUTH_TOKEN, OAUTH_TOKEN_SECRET)
 
-#results = twitter.cursor(twitter.search, q='fiveperfectmovies')
-#for result in results:
+# results = twitter.cursor(twitter.search, q='fiveperfectmovies')
+# for result in results:
 #    print(result['id_str'] + " : " + result['text'])
 
 '''
@@ -88,47 +90,52 @@ for line in buff[:]:
 		continue
 '''
 
-#indefinite while loop that runs every 1 hour. To remove the dependency on scheduler.
+# indefinite while loop that runs every 1 hour. To remove the dependency on scheduler.
 while True:
     for keywords_rt_fav_limits_entry in keywords_rt_fav_limits_all:
         rt_fav_limit = keywords_rt_fav_limits_entry[0]
         keywords = keywords_rt_fav_limits_entry[1]
         for keyword in keywords:
-            for lang_list in ['en','ta']:
+            for lang_list in ['en', 'ta']:
                 try:
-                    #count=100 max (default 15), result_type='mixed' or 'recent'
-                    #count=15 max (default 15), result_type='popular'
-                    print ("search twitter......", keyword, " in ", lang_list, " with max_limit as ", rt_fav_limit)
-                    search_results = twitter.search(q=keyword,count=1000, lang=lang_list, result_type='mixed')
-                    #print (search_results)
+                    # count=100 max (default 15), result_type='mixed' or 'recent'
+                    # count=15 max (default 15), result_type='popular'
+                    print("search twitter......", keyword, " in ", lang_list, " with max_limit as ", rt_fav_limit)
+                    search_results = twitter.search(q=keyword, count=1000, lang=lang_list, result_type='mixed')
+                    # print (search_results)
                 except TwythonError as e:
-                    print (e)
+                    print(e)
 
-                count=0
+                count = 0
                 for tweet in search_results['statuses']:
-                    if  "RT @" not in tweet['text'] and (tweet['favorite_count'] >= int(rt_fav_limit) or tweet['retweet_count'] >= int(rt_fav_limit)) and tweet['retweeted'] == False and tweet['is_quote_status'] == False :#and tweet['possibly_sensitive'] == False:
+                    if "RT @" not in tweet['text'] and (
+                            tweet['favorite_count'] >= int(rt_fav_limit) or tweet['retweet_count'] >= int(
+                            rt_fav_limit)) and tweet['retweeted'] == False and tweet[
+                        'is_quote_status'] == False:  # and tweet['possibly_sensitive'] == False:
                         polarity_result = analysis(tweet['text'])
-                        if  polarity_result >= 0.25 or lang_list == 'ta':
+                        if polarity_result >= 0.25 or lang_list == 'ta':
                             try:
                                 if len(tweet['text']) > 200 or "https" in tweet['text']:
-                                    print (tweet['text'])
+                                    print(tweet['text'])
                                     twitter.retweet(id=int(tweet['id']))
-                                    sendtotelegram(TELEGRAM_TOKEN,TELEGRAM_TELEGRAM_CHAT_ID,tweet['text'])
+                                    sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweet['text'])
                                 else:
-                                    tempStatus="RT @" + tweet['user']['screen_name'] + " : " + tweet['text'] + " via #5k6mbot"
-                                    print (tempStatus.encode('utf-8'))
-                                    #this code is commented because of difficult in identifying the polls. #TODO
-                                    #twitter.update_status(status=tempStatus.encode('utf-8'))
+                                    tempStatus = "RT @" + tweet['user']['screen_name'] + " : " + tweet[
+                                        'text'] + " via #5k6mbot"
+                                    print(tempStatus.encode('utf-8'))
+                                    # this code is commented because of difficult in identifying the polls. #TODO
+                                    # twitter.update_status(status=tempStatus.encode('utf-8'))
                                     twitter.retweet(id=int(tweet['id']))
-                                    sendtotelegram(TELEGRAM_TOKEN,TELEGRAM_TELEGRAM_CHAT_ID,tweet['text'])
-                                count = count +1
-                                print ('Tweet from @%s Date: %s' % (tweet['user']['screen_name'].encode('utf-8'),tweet['created_at']))
-                                print (tweet['text'].encode('utf-8'), '\n', polarity_result)
+                                    sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweet['text'])
+                                count = count + 1
+                                print('Tweet from @%s Date: %s' % (
+                                tweet['user']['screen_name'].encode('utf-8'), tweet['created_at']))
+                                print(tweet['text'].encode('utf-8'), '\n', polarity_result)
                             except TwythonError as e:
-                                print (e)
-                print ("total filtered and retweeted..." + str(count))
-        print ("end of search")
-    print ("sleeping for 6 hour")
-    time.sleep(21600)
-else:
-        print ("***terminated***")
+                                print(e)
+                print("total filtered and retweeted..." + str(count))
+        print("end of search")
+    print("sleeping for 12 hours")
+    time.sleep(21600*2)
+#else:
+#    print("***terminated***")
