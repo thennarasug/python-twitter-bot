@@ -16,7 +16,7 @@ keywords = input("twitter search keyword? ")
 rt_fav_limit = input("max retweet_count or favorite_count? ")
 '''
 
-keywords_rt_fav_limits_all = [[50, ['signalapp', 'degoogle']],
+keywords_rt_fav_limits_all = [[50, ['signalapp', 'degoogle','pinebook','pine64','pinephone']],
                               [125, ['tutanota', 'protonmail', 'duckduckgo', 'protonvpn', 'tails OS', 'tor browser']],
                               [250, ['linux', 'manjaro', 'ubuntu']]]
 
