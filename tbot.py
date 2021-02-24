@@ -16,23 +16,21 @@ keywords = input("twitter search keyword? ")
 rt_fav_limit = input("max retweet_count or favorite_count? ")
 '''
 
-keywords_rt_fav_limits_all = [[50, ['signalapp', 'degoogle','pinebook','pine64','pinephone']],
-                              [125, ['tutanota', 'protonmail', 'duckduckgo', 'protonvpn', 'tails OS', 'tor browser']],
-                              [250, ['linux', 'manjaro', 'ubuntu']]]
+keywords_rt_fav_limits_all = [[50, ['signalapp', 'degoogle', 'f-droid', 'pinebook', 'pine64', 'pinephone']], [50, ['algotrading']], [100, ['tutanota', 'protonmail', 'duckduckgo', 'protonvpn', 'tails OS', 'tor browser', 'manjarolinux', 'manjaro']], [150, ['linux', 'ubuntu']]]
+
 
 
 # TelegramBot method
 def sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweetToTelegram):
     TelegramBot = telepot.Bot(TELEGRAM_TOKEN)
+    chat_id = TELEGRAM_TELEGRAM_CHAT_ID
     # aboutme = TelegramBot.getMe()
     # print (TelegramBot.getMe())
+    # messages = TelegramBot.getUpdates()
+    # for message in messages:
+    #    chat_id = message["message"]["from"]["id"]
+    # print(chat_id)
 
-    '''commented
-    messages = TelegramBot.getUpdates()
-    for message in messages:
-        chat_id = message["message"]["from"]["id"]
-    '''
-    chat_id = TELEGRAM_TELEGRAM_CHAT_ID
     TelegramBot.sendMessage(chat_id, tweetToTelegram)
     print("****updated TelegramBot****")
 
@@ -95,47 +93,48 @@ while True:
     for keywords_rt_fav_limits_entry in keywords_rt_fav_limits_all:
         rt_fav_limit = keywords_rt_fav_limits_entry[0]
         keywords = keywords_rt_fav_limits_entry[1]
+        search_results = ""
         for keyword in keywords:
             for lang_list in ['en', 'ta']:
-                try:
-                    # count=100 max (default 15), result_type='mixed' or 'recent'
-                    # count=15 max (default 15), result_type='popular'
-                    print("search twitter......", keyword, " in ", lang_list, " with max_limit as ", rt_fav_limit)
-                    search_results = twitter.search(q=keyword, count=1000, lang=lang_list, result_type='mixed')
-                    # print (search_results)
-                except TwythonError as e:
-                    print(e)
+                for result_type in ['popular', 'recent']:
+                    try:
+                        # count=100 max (default 15), result_type='mixed' or 'recent'
+                        # count=15 max (default 15), result_type='popular'
+                        # print ("search twitter......", keyword, " in ", lang_list, " with max_limit as ", rt_fav_limit)
+                        search_results = twitter.search(q=keyword, count=100, lang=lang_list, result_type=result_type)
+                        # print (search_results)
+                    except TwythonError as e:
+                        print(e)
 
-                count = 0
-                for tweet in search_results['statuses']:
-                    if "RT @" not in tweet['text'] and (
-                            tweet['favorite_count'] >= int(rt_fav_limit) or tweet['retweet_count'] >= int(
-                            rt_fav_limit)) and tweet['retweeted'] == False and tweet[
-                        'is_quote_status'] == False:  # and tweet['possibly_sensitive'] == False:
-                        polarity_result = analysis(tweet['text'])
-                        if polarity_result >= 0.25 or lang_list == 'ta':
-                            try:
-                                if len(tweet['text']) > 200 or "https" in tweet['text']:
-                                    print(tweet['text'])
-                                    twitter.retweet(id=int(tweet['id']))
-                                    sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweet['text'])
-                                else:
-                                    tempStatus = "RT @" + tweet['user']['screen_name'] + " : " + tweet[
-                                        'text'] + " via #5k6mbot"
-                                    print(tempStatus.encode('utf-8'))
-                                    # this code is commented because of difficult in identifying the polls. #TODO
-                                    # twitter.update_status(status=tempStatus.encode('utf-8'))
-                                    twitter.retweet(id=int(tweet['id']))
-                                    sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweet['text'])
-                                count = count + 1
-                                print('Tweet from @%s Date: %s' % (
-                                tweet['user']['screen_name'].encode('utf-8'), tweet['created_at']))
-                                print(tweet['text'].encode('utf-8'), '\n', polarity_result)
-                            except TwythonError as e:
-                                print(e)
-                print("total filtered and retweeted..." + str(count))
-        print("end of search")
-    print("sleeping for 12 hours")
-    time.sleep(21600*2)
-#else:
-#    print("***terminated***")
+                    if len(search_results) > 0:
+                        count = 0
+                        for tweet in search_results['statuses']:
+                            if "RT @" not in tweet['text'] and (tweet['favorite_count'] >= int(rt_fav_limit) or tweet['retweet_count'] >= int(rt_fav_limit)) and tweet['retweeted'] == False and tweet['is_quote_status'] == False:  # and tweet['possibly_sensitive'] == False:
+                                polarity_result = analysis(tweet['text'])
+                                if polarity_result >= 0.2 or lang_list == 'ta':
+                                    try:
+                                        if len(tweet['text']) > 200 or "https" in tweet['text']:
+                                            twitter.retweet(id=int(tweet['id']))
+                                            print(tweet['text'])
+                                            sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweet['text'])
+                                            time.sleep(5)
+                                        else:
+                                            tempStatus = "RT @" + tweet['user']['screen_name'] + " : " + tweet['text'] + " via #5k6mbot"
+                                            # this code is commented because of difficult in identifying the polls. #TODO
+                                            # twitter.update_status(status=tempStatus.encode('utf-8'))
+                                            twitter.retweet(id=int(tweet['id']))
+                                            sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweet['text'])
+                                            print(tempStatus.encode('utf-8'))
+                                            time.sleep(5)
+                                        count = count + 1
+                                        # print ('Tweet from @%s Date: %s' % (tweet['user']['screen_name'].encode('utf-8'),tweet['created_at']))
+                                        # print (tweet['text'].encode('utf-8'), '\n', polarity_result)
+                                    except TwythonError as e:
+                                        if "You have already retweeted this Tweet" in str(e):
+                                            continue
+                                        else:
+                                            print(e)
+                        # print ("total filtered and retweeted..." + str(count))
+        # print ("end of search")
+    print("sleeping for 1hr")
+    time.sleep(3600)
