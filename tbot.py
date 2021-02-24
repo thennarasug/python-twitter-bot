@@ -135,6 +135,8 @@ while True:
                                         else:
                                             print(e)
                         # print ("total filtered and retweeted..." + str(count))
+        # added this to avoid "Twitter API returned a 429 (Too Many Requests), Rate limit exceeded"
+        time.sleep(10)
         # print ("end of search")
     print("sleeping for 1hr")
     time.sleep(3600)
