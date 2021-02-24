@@ -1,11 +1,3 @@
 .idea
 __pycache__
-.gitignore
 python-twitter-bot.iml
-_config.yml
-.idea\.gitignore
-.idea\codeStyles
-.idea\misc.xml
-.idea\modules.xml
-.idea\vcs.xml
-.idea\codeStyles\Projext.xml
