@@ -36,7 +36,7 @@ twitter = Twython(APP_KEY, APP_SECRET, OAUTH_TOKEN, OAUTH_TOKEN_SECRET)
 
 # print (twitter.search(q='fiveperfectmovies'))
 
-with open('/storage/emulated/0/Download/pythontwitterbot/tweet.txt', 'r+') as tweetfile:
+with open('./tweets.txt', 'r+') as tweetfile:
     buff = tweetfile.readlines()
 
 for line in buff[:]:
@@ -64,19 +64,16 @@ for lang_list in ['en', 'ta']:
         # count=15 max (default 15), result_type='popular'
         print("search twitter......", keyword, " in ", lang_list, " with max_limit as ", max_limit)
         search_results = twitter.search(q=keyword, count=100, lang=lang_list, result_type='popular')
-    except TwythonError as e:
-        print(e)
 
-    count = 0
-    # print(search_results)
-    for tweet in search_results['statuses']:
-        if "RT @" not in tweet['text'] and (
-                tweet['favorite_count'] >= int(max_limit) or tweet['retweet_count'] >= int(max_limit)) and tweet[
-            'retweeted'] == False and tweet['is_quote_status'] == False:  # and tweet['possibly_sensitive'] == False:
-            polarity_result = analysis(tweet['text'])
-            # print (tweet['retweeted'],tweet['is_quote_status'])
-            if polarity_result >= 0.25:
-                try:
+        count = 0
+        # print(search_results)
+        for tweet in search_results['statuses']:
+            if "RT @" not in tweet['text'] and (
+                    tweet['favorite_count'] >= int(max_limit) or tweet['retweet_count'] >= int(max_limit)) and tweet[
+                'retweeted'] == False and tweet['is_quote_status'] == False:  # and tweet['possibly_sensitive'] == False:
+                polarity_result = analysis(tweet['text'])
+                # print (tweet['retweeted'],tweet['is_quote_status'])
+                if polarity_result >= 0.25:
                     # twitter.update_status(status=tweet['text'].encode('utf-8'))
                     twitter.retweet(id=int(tweet['id']))
                     count = count + 1
@@ -85,7 +82,9 @@ for lang_list in ['en', 'ta']:
                     print(tweet['text'].encode('utf-8'), '\n', polarity_result)
                     # print (tweet['text'], '\n')
                     # print(tweet)
-                except TwythonError as e:
-                    print(e)
-    print("total filtered and retweeted..." + str(count))
+        print("total filtered and retweeted..." + str(count))
+
+    except TwythonError as e:
+        print(e)
+
 print("end of search")
