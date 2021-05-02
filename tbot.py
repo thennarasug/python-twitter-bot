@@ -305,7 +305,7 @@ while True:
     try:
         #autofollowback()
         #autounfollow()
-        autofollowandunfollow()
+        #autofollowandunfollow()
     except:
         pass
     for keywords_rt_fav_limits_entry in keywords_rt_fav_limits_all:
