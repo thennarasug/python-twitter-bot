@@ -1,6 +1,5 @@
 import datetime as dt
 # TelegramBot
-import time
 # heroku env variables
 from os import environ
 
@@ -27,7 +26,9 @@ rt_fav_limit = input("max retweet_count or favorite_count? ")
 
 def create_table():
     c = db.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS pollachi (id string primary key)")
+    c.execute("CREATE TABLE IF NOT EXISTS tbot_tweet_id (id string primary key)")
+    c.execute("CREATE TABLE IF NOT EXISTS tbot_followback_id (id string primary key)")
+    c.execute("CREATE TABLE IF NOT EXISTS tbot_unfollow_id (id string primary key)")
     try:
         db.commit()
     except:
@@ -38,7 +39,35 @@ def insert_error_string(id):
     c = db.cursor()
     try:
         vals = [id]
-        query = "INSERT INTO pollachi (id) VALUES (?)"
+        query = "INSERT INTO tbot_tweet_id (id) VALUES (?)"
+        c.execute(query, vals)
+        db.commit()
+    except sqlite3.IntegrityError as i:
+        pass
+    except:
+        error = traceback.print_exc()
+        db.rollback()
+
+
+def insert_followbackid(id):
+    c = db.cursor()
+    try:
+        vals = [id]
+        query = "INSERT INTO tbot_followback_id (id) VALUES (?)"
+        c.execute(query, vals)
+        db.commit()
+    except sqlite3.IntegrityError as i:
+        pass
+    except:
+        error = traceback.print_exc()
+        db.rollback()
+
+
+def insert_unfollowid(id):
+    c = db.cursor()
+    try:
+        vals = [id]
+        query = "INSERT INTO tbot_followback_id (id) VALUES (?)"
         c.execute(query, vals)
         db.commit()
     except sqlite3.IntegrityError as i:
@@ -50,7 +79,7 @@ def insert_error_string(id):
 
 def select_error_string(id):
     try:
-        query = "select count(*) from pollachi where id = '{}'".format(id)
+        query = "select count(*) from tbot_tweet_id where id = '{}'".format(id)
         cursor = db.execute(query)
         db.commit()
         return cursor
@@ -59,6 +88,41 @@ def select_error_string(id):
         db.rollback()
         return None
 
+
+def select_followbackid_string(id):
+    try:
+        query = "select count(*) from tbot_followback_id where id = '{}'".format(id)
+        cursor = db.execute(query)
+        db.commit()
+        return cursor
+    except:
+        error = traceback.print_exc()
+        db.rollback()
+        return None
+
+
+def select_followbackid_all():
+    try:
+        query = "select * from tbot_followback_id"
+        cursor = db.execute(query)
+        db.commit()
+        return cursor
+    except:
+        error = traceback.print_exc()
+        db.rollback()
+        return None
+
+
+def select_unfollowid_string(id):
+    try:
+        query = "select count(*) from tbot_unfollow_id where id = '{}'".format(id)
+        cursor = db.execute(query)
+        db.commit()
+        return cursor
+    except:
+        error = traceback.print_exc()
+        db.rollback()
+        return None
 
 # TelegramBot method
 def sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweetToTelegram):
@@ -137,8 +201,113 @@ def tweetfromfile():
             continue
 
 
+def autofollowback():
+    try:
+        followers = twitter.get_followers_ids(screen_name = "5k6m")
+        for followbackid in followers['ids']:
+            try:
+                cursor = select_followbackid_string(followbackid)
+                for row in cursor:
+                    if row[0] == 0:
+                        twitter.create_friendship(user_id=followbackid)
+                        insert_followbackid(followbackid)
+                        print("followback -->", followbackid)
+                        time.sleep(1.5)
+            except TwythonError as e:
+                print("error on followback", followbackid, e)
+    except TwythonError as e:
+        #insert_error_string(tweet['id'])
+        print("error on get_followers_ids", e)
+    except Exception as e:
+        print("Exception", e)
+
+
+def autounfollow():
+    try:
+        followers = twitter.get_followers_ids(screen_name = "5k6m")
+        followersfromdb_cursor = select_followbackid_all()
+        for id in followersfromdb_cursor:
+            if id[0] not in followers['ids']:
+                try:
+                    twitter.destroy_friendship(user_id=id)
+                    insert_followbackid(id)
+                except TwythonError as e:
+                    print("error on followback", id, e)
+    except TwythonError as e:
+        #insert_error_string(tweet['id'])
+        print("error on get_followers_ids", e)
+    except Exception as e:
+        print("Exception", e)
+
+
+#no db flow
+def autofollowandunfollow():
+
+    followcount = 0
+    followerrorcount = 0
+    unfollowcount = 0
+    unfollowerrorcount = 0
+
+
+    # follow
+    try:
+        followers = twitter.get_followers_ids(screen_name = "5k6m")
+        following = twitter.get_friends_ids(screen_name = "5k6m")
+        for followbackid in followers['ids']:
+            try:
+                if followbackid not in following['ids']:
+                    twitter.create_friendship(user_id=followbackid)
+                    print("followback -->", followbackid)
+                    time.sleep(1.5)
+                followcount = followcount+1
+            except TwythonError as e:
+                #print("error on followback", followbackid, e)
+                followerrorcount = followerrorcount+1
+    except TwythonError as e:
+        print(e)
+    except Exception as e:
+        print("Exception", e)
+
+    log.loginfo("followcount " + str(followcount) + " | followerrorcount " + str(followerrorcount) + " --> sleeping for 10sec")
+    print(dt.datetime.now(), "followcount " + str(followcount) + " | followerrorcount " + str(followerrorcount) + " --> sleeping for 10sec")
+    time.sleep(10)
+
+    '''
+    # unfollow
+    # lookup_friendships
+    try:
+        followers = twitter.get_followers_ids(screen_name = "5k6m")
+        following = twitter.get_friends_ids(screen_name = "5k6m")
+        for unfollowid in following['ids']:
+            try:
+                lookup_friendships = twitter.lookup_friendships(user_id=unfollowid)
+                if (unfollowid not in followers['ids']) and (lookup_friendships['relationship']['target']['following_received'] == False):
+                    twitter.destroy_friendship(user_id=unfollowid)
+                    print("unfollow -->", unfollowid)
+                    time.sleep(1.5)
+                    unfollowcount = unfollowcount+1
+            except TwythonError as e:
+                #print("error on unfollow", unfollowid, e)
+                unfollowerrorcount = unfollowerrorcount+1
+    except TwythonError as e:
+        print(e)
+    except Exception as e:
+        print("Exception", e)
+
+    log.loginfo("unfollowcount " + str(unfollowcount) + " | unfollowerrorcount " + str(unfollowerrorcount) + " --> sleeping for 5min")
+    print(dt.datetime.now(), "unfollowcount " + str(unfollowcount) + " | unfollowerrorcount " + str(unfollowerrorcount) + " --> sleeping for 5min")
+    '''
+
 # indefinite while loop that runs every 1 hour. To remove the dependency on scheduler.
 while True:
+    log.loginfo("*****************************triggered*****************************")
+    print(dt.datetime.now(), "*****************************triggered*****************************")
+    try:
+        #autofollowback()
+        #autounfollow()
+        autofollowandunfollow()
+    except:
+        pass
     for keywords_rt_fav_limits_entry in keywords_rt_fav_limits_all:
         rt_fav_limit = keywords_rt_fav_limits_entry[0]
         keywords = keywords_rt_fav_limits_entry[1]
@@ -194,6 +363,7 @@ while True:
                         print("error on search ", e)
                 time.sleep(10)
         # print ("end of search")
-    log.loginfo("*****************************sleeping for 1hr*****************************")
-    print(dt.datetime.now(), "*****************************sleeping for 1hr*****************************")
-    time.sleep(3600)
+    log.loginfo("*****************************sleeping for 30min*****************************")
+    print(dt.datetime.now(), "*****************************sleeping for 30min*****************************")
+    time.sleep(1800)
+
