@@ -298,6 +298,7 @@ def autofollowandunfollow():
     print(dt.datetime.now(), "unfollowcount " + str(unfollowcount) + " | unfollowerrorcount " + str(unfollowerrorcount) + " --> sleeping for 5min")
     '''
 
+'''
 # indefinite while loop that runs every 1 hour. To remove the dependency on scheduler.
 while True:
     log.loginfo("*****************************triggered*****************************")
@@ -366,4 +367,4 @@ while True:
     log.loginfo("*****************************sleeping for 30min*****************************")
     print(dt.datetime.now(), "*****************************sleeping for 30min*****************************")
     time.sleep(1800)
-
+'''
