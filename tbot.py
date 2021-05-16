@@ -268,6 +268,7 @@ def autofollowandunfollow():
                             if 'following_requested' not in lookup_friendships[0]['connections']:
                                 twitter.create_friendship(user_id=followbackid)
                                 print("followback -->", followbackid)
+                                log.loginfo("followback -->", followbackid)
                                 time.sleep(8)
                             insert_followbackid(followbackid)
                 else:
@@ -279,19 +280,24 @@ def autofollowandunfollow():
                     followcount = followcount + 1
                 elif "You are unable to follow more people at this time" in str(e):
                     print("break", followbackid, e)
+                    log.logerror("break", followbackid, e)
                     break
                 elif "Cannot find specified user" in str(e):
                     insert_followbackid(followbackid)
                     print(followbackid, e)
+                    log.logerror(followbackid, e)
                     time.sleep(8)
                 else:
                     print(followbackid, e)
+                    log.logerror(followbackid, e)
                     time.sleep(8)
                     followerrorcount = followerrorcount + 1
     except TwythonError as e:
         print(e)
+        log.logerror(e)
     except Exception as e:
         print("Exception", e)
+        log.logerror(e)
 
     log.loginfo("followcount " + str(followcount) + " | followerrorcount " + str(followerrorcount) + " --> sleeping for 10sec")
     print(dt.datetime.now(), "followcount " + str(followcount) + " | followerrorcount " + str(followerrorcount) + " --> sleeping for 10sec")
@@ -306,20 +312,22 @@ def autofollowandunfollow():
         for unfollowid in following['ids']:
             try:
                 if (unfollowid not in followers['ids']):
-                    lookup_friendships = twitter.lookup_friendships(user_id=unfollowid)
-                    if ('following_requested' not in lookup_friendships[0]['connections']):
-                        twitter.destroy_friendship(user_id=unfollowid)
-                        print("unfollow -->", unfollowid)
-                        time.sleep(1.5)
-                        unfollowcount = unfollowcount+1
+                    #lookup_friendships = twitter.lookup_friendships(user_id=unfollowid)
+                    #if ('following_requested' not in lookup_friendships[0]['connections']):
+                    twitter.destroy_friendship(user_id=unfollowid)
+                    print("unfollow -->", unfollowid)
+                    log.loginfo("unfollow -->", unfollowid)
+                    time.sleep(1.5)
+                    unfollowcount = unfollowcount+1
             except TwythonError as e:
                 #print("error on unfollow", unfollowid, e)
                 unfollowerrorcount = unfollowerrorcount+1
     except TwythonError as e:
         print(e)
+        log.logerror(e)
     except Exception as e:
         print("Exception", e)
-
+        log.logerror(e)
 
     log.loginfo("unfollowcount " + str(unfollowcount) + " | unfollowerrorcount " + str(unfollowerrorcount) + " --> sleeping for 5min")
     print(dt.datetime.now(), "unfollowcount " + str(unfollowcount) + " | unfollowerrorcount " + str(unfollowerrorcount) + " --> sleeping for 5min")
