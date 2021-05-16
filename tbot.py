@@ -24,6 +24,7 @@ keywords = input("twitter search keyword? ")
 rt_fav_limit = input("max retweet_count or favorite_count? ")
 '''
 
+
 def create_table():
     c = db.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS tbot_tweet_id (id string primary key)")
@@ -67,7 +68,9 @@ def insert_unfollowid(id):
     c = db.cursor()
     try:
         vals = [id]
-        query = "INSERT INTO tbot_followback_id (id) VALUES (?)"
+        query = "INSERT INTO tbot_unfollow_id (id) VALUES (?)"
+        c.execute(query, vals)
+        query = "delete from tbot_followback_id where id = '{}'".format(id)
         c.execute(query, vals)
         db.commit()
     except sqlite3.IntegrityError as i:
@@ -124,6 +127,7 @@ def select_unfollowid_string(id):
         db.rollback()
         return None
 
+
 # TelegramBot method
 def sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweetToTelegram):
     TelegramBot = telepot.Bot(TELEGRAM_TOKEN)
@@ -171,39 +175,40 @@ TELEGRAM_TELEGRAM_CHAT_ID = environ.get('TELEGRAM_TELEGRAM_CHAT_ID')
 
 twitter = Twython(APP_KEY, APP_SECRET, OAUTH_TOKEN, OAUTH_TOKEN_SECRET)
 
+
 # results = twitter.cursor(twitter.search, q='fiveperfectmovies')
 # for result in results:
 #    print(result['id_str'] + " : " + result['text'])
 
 def tweetfromfile():
-    #below section of code is to read the lines from a file and to tweet.
-    #not in use now, just kept for reference.
+    # below section of code is to read the lines from a file and to tweet.
+    # not in use now, just kept for reference.
     with open('tweets.txt', 'r+') as tweetfile:
         buff = tweetfile.readlines()
 
     for line in buff[:]:
         line = line.strip(r'\n')
-        if len(line)<=280 and len(line)>0:
-            print ("Tweeting...")
+        if len(line) <= 280 and len(line) > 0:
+            print("Tweeting...")
             try:
                 twitter.update_status(status=line)
             except TwythonError as e:
-                print (e)
-            with open ('tweets.txt','w') as tweetfile:
+                print(e)
+            with open('tweets.txt', 'w') as tweetfile:
                 buff.remove(line)
                 tweetfile.writelines(buff)
             time.sleep(1)
         else:
-            with open ('tweets.txt', 'w') as tweetfile:
+            with open('tweets.txt', 'w') as tweetfile:
                 buff.remove(line)
                 tweetfile.writelines(buff)
-            print ("Skipped line - Too long for a tweet!")
+            print("Skipped line - Too long for a tweet!")
             continue
 
 
 def autofollowback():
     try:
-        followers = twitter.get_followers_ids(screen_name = "5k6m")
+        followers = twitter.get_followers_ids(screen_name="5k6m")
         for followbackid in followers['ids']:
             try:
                 cursor = select_followbackid_string(followbackid)
@@ -216,7 +221,7 @@ def autofollowback():
             except TwythonError as e:
                 print("error on followback", followbackid, e)
     except TwythonError as e:
-        #insert_error_string(tweet['id'])
+        # insert_error_string(tweet['id'])
         print("error on get_followers_ids", e)
     except Exception as e:
         print("Exception", e)
@@ -224,7 +229,7 @@ def autofollowback():
 
 def autounfollow():
     try:
-        followers = twitter.get_followers_ids(screen_name = "5k6m")
+        followers = twitter.get_followers_ids(screen_name="5k6m")
         followersfromdb_cursor = select_followbackid_all()
         for id in followersfromdb_cursor:
             if id[0] not in followers['ids']:
@@ -234,13 +239,13 @@ def autounfollow():
                 except TwythonError as e:
                     print("error on followback", id, e)
     except TwythonError as e:
-        #insert_error_string(tweet['id'])
+        # insert_error_string(tweet['id'])
         print("error on get_followers_ids", e)
     except Exception as e:
         print("Exception", e)
 
 
-#no db flow
+# no db flow
 def autofollowandunfollow():
 
     followcount = 0
@@ -251,18 +256,38 @@ def autofollowandunfollow():
 
     # follow
     try:
-        followers = twitter.get_followers_ids(screen_name = "5k6m")
-        following = twitter.get_friends_ids(screen_name = "5k6m")
+        followers = twitter.get_followers_ids(screen_name="5k6m")
+        following = twitter.get_friends_ids(screen_name="5k6m")
         for followbackid in followers['ids']:
             try:
-                if followbackid not in following['ids']:
-                    twitter.create_friendship(user_id=followbackid)
-                    print("followback -->", followbackid)
-                    time.sleep(1.5)
-                followcount = followcount+1
+                if followbackid not in following['ids']:# and not lookup_friendships['relationship']['target']['following_received']:
+                    cursor = select_followbackid_string(followbackid)
+                    for row in cursor:
+                        if row[0] == 0: #todo: change back to 0
+                            lookup_friendships = twitter.lookup_friendships(user_id=followbackid)
+                            if 'following_requested' not in lookup_friendships[0]['connections']:
+                                twitter.create_friendship(user_id=followbackid)
+                                print("followback -->", followbackid)
+                                time.sleep(8)
+                            insert_followbackid(followbackid)
+                else:
+                    insert_followbackid(followbackid)
+                followcount = followcount + 1
             except TwythonError as e:
-                #print("error on followback", followbackid, e)
-                followerrorcount = followerrorcount+1
+                if "You've already requested to follow" in str(e):
+                    insert_followbackid(followbackid)
+                    followcount = followcount + 1
+                elif "You are unable to follow more people at this time" in str(e):
+                    print("break", followbackid, e)
+                    break
+                elif "Cannot find specified user" in str(e):
+                    insert_followbackid(followbackid)
+                    print(followbackid, e)
+                    time.sleep(8)
+                else:
+                    print(followbackid, e)
+                    time.sleep(8)
+                    followerrorcount = followerrorcount + 1
     except TwythonError as e:
         print(e)
     except Exception as e:
@@ -272,7 +297,7 @@ def autofollowandunfollow():
     print(dt.datetime.now(), "followcount " + str(followcount) + " | followerrorcount " + str(followerrorcount) + " --> sleeping for 10sec")
     time.sleep(10)
 
-    '''
+
     # unfollow
     # lookup_friendships
     try:
@@ -280,12 +305,13 @@ def autofollowandunfollow():
         following = twitter.get_friends_ids(screen_name = "5k6m")
         for unfollowid in following['ids']:
             try:
-                lookup_friendships = twitter.lookup_friendships(user_id=unfollowid)
-                if (unfollowid not in followers['ids']) and (lookup_friendships['relationship']['target']['following_received'] == False):
-                    twitter.destroy_friendship(user_id=unfollowid)
-                    print("unfollow -->", unfollowid)
-                    time.sleep(1.5)
-                    unfollowcount = unfollowcount+1
+                if (unfollowid not in followers['ids']):
+                    lookup_friendships = twitter.lookup_friendships(user_id=unfollowid)
+                    if ('following_requested' not in lookup_friendships[0]['connections']):
+                        twitter.destroy_friendship(user_id=unfollowid)
+                        print("unfollow -->", unfollowid)
+                        time.sleep(1.5)
+                        unfollowcount = unfollowcount+1
             except TwythonError as e:
                 #print("error on unfollow", unfollowid, e)
                 unfollowerrorcount = unfollowerrorcount+1
@@ -294,21 +320,27 @@ def autofollowandunfollow():
     except Exception as e:
         print("Exception", e)
 
+
     log.loginfo("unfollowcount " + str(unfollowcount) + " | unfollowerrorcount " + str(unfollowerrorcount) + " --> sleeping for 5min")
     print(dt.datetime.now(), "unfollowcount " + str(unfollowcount) + " | unfollowerrorcount " + str(unfollowerrorcount) + " --> sleeping for 5min")
-    '''
 
-'''
+
+
 # indefinite while loop that runs every 1 hour. To remove the dependency on scheduler.
 while True:
-    log.loginfo("*****************************triggered*****************************")
-    print(dt.datetime.now(), "*****************************triggered*****************************")
+
     try:
-        #autofollowback()
-        #autounfollow()
-        #autofollowandunfollow()
-    except:
         pass
+        # log.loginfo("*****************************triggered - AUTOFOLLOW*****************************")
+        # print(dt.datetime.now(), "*****************************triggered - AUTOFOLLOW*****************************")
+        # autofollowback()
+        # autounfollow()
+        autofollowandunfollow()
+    except Exception as e:
+        print("Exception", e)
+
+    log.loginfo("*****************************triggered - RT*****************************")
+    print(dt.datetime.now(), "*****************************triggered - RT*****************************")
     for keywords_rt_fav_limits_entry in keywords_rt_fav_limits_all:
         rt_fav_limit = keywords_rt_fav_limits_entry[0]
         keywords = keywords_rt_fav_limits_entry[1]
@@ -335,6 +367,7 @@ while True:
                                                 if row[0] == 0:
                                                     if len(tweet['text']) > 200 or "https" in tweet['text']:
                                                         twitter.retweet(id=int(tweet['id']))
+                                                        time.sleep(8)
                                                         log.loginfo(tweet['text'])
                                                         print(tweet['text'])
                                                         sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweet['text'])
@@ -344,6 +377,7 @@ while True:
                                                         # this code is commented because of difficult in identifying the polls. #TODO
                                                         # twitter.update_status(status=tempStatus.encode('utf-8'))
                                                         twitter.retweet(id=int(tweet['id']))
+                                                        time.sleep(8)
                                                         sendtotelegram(TELEGRAM_TOKEN, TELEGRAM_TELEGRAM_CHAT_ID, tweet['text'])
                                                         log.loginfo(tempStatus.encode('utf-8'))
                                                         print(tempStatus.encode('utf-8'))
@@ -354,17 +388,30 @@ while True:
                                         except TwythonError as e:
                                             if "You have already retweeted this Tweet" in str(e):
                                                 insert_error_string(tweet['id'])
-                                                #print("error on action", tweet['id'], e)
+                                                print(tweet['id'], e)
+                                                time.sleep(8)
+                                            elif "Cannot find specified user" in str(e):
+                                                insert_error_string(tweet['id'])
+                                                print(tweet['id'], e)
+                                                time.sleep(8)
                                             else:
                                                 log.logcritical("error on action ", e)
                                                 print("error on action ", e)
+                                                time.sleep(8)
                             # print ("total filtered and retweeted..." + str(count))
                     # added this to avoid "Twitter API returned a 429 (Too Many Requests), Rate limit exceeded"
                     except TwythonError as e:
                         print("error on search ", e)
+                        log.logerror("other errors..", e)
+                    except ConnectionResetError as c:
+                        print("go to sleep..", c)
+                        log.logerror("go to sleep..", c)
+                        time.sleep(5)
+                    except Exception as e:
+                        print("other errors ..", e)
+                        log.logerror("other errors..", e)
                 time.sleep(10)
         # print ("end of search")
     log.loginfo("*****************************sleeping for 30min*****************************")
     print(dt.datetime.now(), "*****************************sleeping for 30min*****************************")
     time.sleep(1800)
-'''
