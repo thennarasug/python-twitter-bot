@@ -304,6 +304,7 @@ def autofollowandunfollow():
     time.sleep(10)
 
 
+    '''
     # unfollow
     # lookup_friendships
     try:
@@ -328,6 +329,7 @@ def autofollowandunfollow():
     except Exception as e:
         print("Exception", e)
         log.logerror(e)
+    '''
 
     log.loginfo("unfollowcount " + str(unfollowcount) + " | unfollowerrorcount " + str(unfollowerrorcount) + " --> sleeping for 5min")
     print(dt.datetime.now(), "unfollowcount " + str(unfollowcount) + " | unfollowerrorcount " + str(unfollowerrorcount) + " --> sleeping for 5min")
