@@ -157,7 +157,7 @@ def analysis(sentence):
     return sentiment.polarity
 
 
-keywords_rt_fav_limits_all = [[50, ['signalapp', 'degoogle', 'f-droid', 'pinebook', 'pine64', 'pinephone', 'Yubico']], [50, ['algotrading']], [100, ['tutanota', 'protonmail', 'duckduckgo', 'protonvpn', 'tails OS', 'tor browser', 'manjarolinux', 'manjaro']], [150, ['linux', 'ubuntu']]]
+keywords_rt_fav_limits_all = [[100, ['signalapp', 'degoogle', 'f-droid', 'pinebook', 'pine64', 'pinephone', 'Yubico']], [100, ['algotrading']], [200, ['tutanota', 'protonmail', 'duckduckgo', 'protonvpn', 'tails OS', 'tor browser', 'manjarolinux', 'manjaro']], [250, ['linux', 'ubuntu']]]
 
 
 # for database
